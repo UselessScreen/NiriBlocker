@@ -31,7 +31,7 @@ jobs:
         run: >
           uv run --no-project
           --with pytest --with pytest-cov
-          --with sqlalchemy --with aiosqlite
+          --with sqlalchemy[asyncio] --with aiosqlite
           --with fastapi --with httpx --with ntplib
           pytest -q --cov=daemon --cov-report=xml --cov-report=term
       - name: Upload coverage to Codecov
