@@ -14,7 +14,7 @@ from enforcer.proc_scan import (
     status_real_uid,
 )
 
-BROWSERS = ["firefox", "chromium", "brave-browser"]
+BROWSERS = ["firefox", "chromium", "brave-browser", "zen-browser", "zen", "zen-bin"]
 
 
 def _status_text(uid=1000, state="S", tracer=0):
@@ -66,6 +66,14 @@ def test_finds_matching_browser_for_target_uid(tmp_path):
     _add_pid(proc, 100, _make_bin(tmp_path, "firefox"), uid=1000)
     _add_pid(proc, 200, _make_bin(tmp_path, "chromium"), uid=1000)
     assert find_browser_pids(proc, BROWSERS, 1000) == [100, 200]
+
+
+def test_finds_zen_browser_process_names(tmp_path):
+    proc = _proc(tmp_path)
+    _add_pid(proc, 100, _make_bin(tmp_path, "zen-browser"), uid=1000)
+    _add_pid(proc, 200, _make_bin(tmp_path, "zen"), uid=1000)
+    _add_pid(proc, 300, _make_bin(tmp_path, "zen-bin"), uid=1000)
+    assert find_browser_pids(proc, BROWSERS, 1000) == [100, 200, 300]
 
 
 def test_excludes_other_uid(tmp_path):
