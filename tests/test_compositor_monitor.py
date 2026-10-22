@@ -40,6 +40,13 @@ def test_normalizes_niri_windows(monkeypatch):
     assert windows[0]["_compositor"] == "niri"
 
 
+def test_detects_zen_browser_window():
+    monitor = CompositorMonitor(None)
+
+    assert monitor._is_browser_window({"class": "zen-browser"})
+    assert monitor._is_browser_window({"class": "zen"})
+
+
 def test_falls_back_to_niri_without_socket_hint(monkeypatch):
     commands = []
 

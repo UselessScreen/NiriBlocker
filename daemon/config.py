@@ -9,6 +9,22 @@ from daemon import paths
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_BROWSERS = [
+    "firefox",
+    "firefox-esr",
+    "chromium",
+    "google-chrome",
+    "brave-browser",
+    "microsoft-edge",
+    "opera",
+    "vivaldi-stable",
+    "zen-browser",
+    "zen",
+    "zen-bin",
+]
+
+_LEGACY_DEFAULT_BROWSERS = DEFAULT_BROWSERS[:-3]
+
 
 @dataclass
 class DaemonConfig:
@@ -73,18 +89,7 @@ class Config:
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
     security: SecurityConfig = field(default_factory=SecurityConfig)
     ai: AIConfig = field(default_factory=AIConfig)
-    browsers: list[str] = field(
-        default_factory=lambda: [
-            "firefox",
-            "firefox-esr",
-            "chromium",
-            "google-chrome",
-            "brave-browser",
-            "microsoft-edge",
-            "opera",
-            "vivaldi-stable",
-        ]
-    )
+    browsers: list[str] = field(default_factory=lambda: list(DEFAULT_BROWSERS))
 
 
 def get_config_path() -> str:
@@ -117,12 +122,16 @@ def load_config() -> Config:
                 # Remove old field if both exist
                 del security_data["dev_mode"]
 
+            browsers = data.get("browsers", Config().browsers)
+            if browsers == _LEGACY_DEFAULT_BROWSERS:
+                browsers = list(DEFAULT_BROWSERS)
+
             config = Config(
                 daemon=DaemonConfig(**data.get("daemon", {})),
                 monitoring=MonitoringConfig(**data.get("monitoring", {})),
                 security=SecurityConfig(**security_data),
                 ai=AIConfig(**data.get("ai", {})),
-                browsers=data.get("browsers", Config().browsers),
+                browsers=browsers,
             )
             logger.info(f"Loaded configuration from {config_path}")
         except (json.JSONDecodeError, TypeError, KeyError) as e:

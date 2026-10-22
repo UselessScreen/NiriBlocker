@@ -25,20 +25,9 @@ import logging
 from dataclasses import asdict, dataclass, field
 
 from daemon import paths
+from daemon.config import DEFAULT_BROWSERS
 
 logger = logging.getLogger(__name__)
-
-
-DEFAULT_BROWSERS = [
-    "firefox",
-    "firefox-esr",
-    "chromium",
-    "google-chrome",
-    "brave-browser",
-    "microsoft-edge",
-    "opera",
-    "vivaldi-stable",
-]
 
 
 @dataclass
@@ -90,7 +79,10 @@ def load_policy() -> EnforcementPolicy:
         if path.exists():
             data = json.loads(path.read_text())
             known = EnforcementPolicy().__dict__.keys()
-            return EnforcementPolicy(**{k: v for k, v in data.items() if k in known})
+            values = {k: v for k, v in data.items() if k in known}
+            if values.get("browsers") == DEFAULT_BROWSERS[:-3]:
+                values["browsers"] = list(DEFAULT_BROWSERS)
+            return EnforcementPolicy(**values)
     except (OSError, json.JSONDecodeError, TypeError) as e:
         logger.error("Failed to read %s: %s — using config fallback", path, e)
     return _from_config()
