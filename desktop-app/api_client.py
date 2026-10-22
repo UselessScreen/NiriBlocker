@@ -639,6 +639,30 @@ class DaemonClient:
         except requests.RequestException as e:
             raise Exception(f"Request failed: {str(e)}") from e
 
+    def get_ai_settings(self) -> dict | None:
+        try:
+            response = self._request('GET', '/api/settings/ai')
+            if response.status_code == 200:
+                return response.json()
+        except requests.RequestException:
+            pass
+        return None
+
+    def set_ai_settings(self, settings: dict) -> dict:
+        try:
+            response = self._request('PUT', '/api/settings/ai', json=settings)
+            if response.status_code == 200:
+                return response.json()
+            if response.status_code == 403:
+                raise PermissionError("Settings are locked")
+            try:
+                detail = response.json().get('detail', response.text)
+            except ValueError:
+                detail = response.text
+            raise Exception(f"Failed to update AI settings: {detail}")
+        except requests.RequestException as e:
+            raise Exception(f"Request failed: {str(e)}") from e
+
     def request_grant(self, url: str, reason: str, minutes: int) -> dict | None:
         """Request a temporary access grant for a URL.
 

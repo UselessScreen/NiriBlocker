@@ -187,7 +187,12 @@ The "Browsers" page shows which running browsers have a live extension heartbeat
 | `~/.config/hyprblocker/watchdog_state.json` | Watchdog process state |
 | `~/.config/hyprblocker/daemon.log` | Daemon log |
 | `~/.config/systemd/user/hyprblocker.service` | Systemd unit |
-| `.env` (repo root) | `OPENROUTER_API_KEY` for the grant judge (optional — without it, grant requests are denied) |
+| `~/.config/hyprblocker/config.json` | Daemon and grant-judge provider settings |
+
+The grant judge defaults to OpenRouter. Configure Google Gemini or a local
+OpenAI-compatible service (such as Ollama or LM Studio) from **Settings →
+Grant Judge AI**. The API key is stored in the user config file, never returned
+by the settings API, and is preserved when the key field is left blank.
 
 In root-owned mode the code moves to `/opt/hyprblocker` and state to `/var/lib/hyprblocker` (user-writable `user/`, root-owned `secure/`) — see [`documentation/ROOT_INSTALL.md`](documentation/ROOT_INSTALL.md).
 

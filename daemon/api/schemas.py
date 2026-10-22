@@ -240,3 +240,19 @@ class JudgePolicyResponse(BaseModel):
 
 class JudgePolicyUpdateRequest(BaseModel):
     text: str
+
+
+class AISettingsResponse(BaseModel):
+    provider: str
+    model: str
+    base_url: str
+    api_key_configured: bool
+    api_key_hint: str | None
+    locked: bool
+
+
+class AISettingsUpdateRequest(BaseModel):
+    provider: str
+    model: str
+    base_url: str = ""
+    api_key: str | None = None

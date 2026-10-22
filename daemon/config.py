@@ -56,12 +56,23 @@ class SecurityConfig:
 
 
 @dataclass
+class AIConfig:
+    """Grant-judge provider settings for the user-tier daemon."""
+
+    provider: str = "openrouter"
+    model: str = "anthropic/claude-sonnet-5"
+    base_url: str = "https://openrouter.ai/api/v1"
+    api_key: str = ""
+
+
+@dataclass
 class Config:
     """Main configuration class."""
 
     daemon: DaemonConfig = field(default_factory=DaemonConfig)
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
     security: SecurityConfig = field(default_factory=SecurityConfig)
+    ai: AIConfig = field(default_factory=AIConfig)
     browsers: list[str] = field(
         default_factory=lambda: [
             "firefox",
@@ -110,6 +121,7 @@ def load_config() -> Config:
                 daemon=DaemonConfig(**data.get("daemon", {})),
                 monitoring=MonitoringConfig(**data.get("monitoring", {})),
                 security=SecurityConfig(**security_data),
+                ai=AIConfig(**data.get("ai", {})),
                 browsers=data.get("browsers", Config().browsers),
             )
             logger.info(f"Loaded configuration from {config_path}")
@@ -150,6 +162,12 @@ def save_config(config: Config) -> None:
             "watchdog_enabled": config.security.watchdog_enabled,
             "watchdog_count": config.security.watchdog_count,
             "settings_lock_until": config.security.settings_lock_until,
+        },
+        "ai": {
+            "provider": config.ai.provider,
+            "model": config.ai.model,
+            "base_url": config.ai.base_url,
+            "api_key": config.ai.api_key,
         },
         "browsers": config.browsers,
     }

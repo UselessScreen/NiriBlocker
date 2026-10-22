@@ -11,6 +11,8 @@ from daemon.time_verifier import get_time_verifier
 from daemon.watchdog import WatchdogManager, is_settings_locked_ntp
 
 from ..schemas import (
+    AISettingsResponse,
+    AISettingsUpdateRequest,
     BrowserEnforcementStatusResponse,
     BrowserEnforcementUpdateRequest,
     JudgePolicyResponse,
@@ -27,6 +29,45 @@ from ..schemas import (
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 logger = logging.getLogger(__name__)
+
+
+def _ai_key_hint(key: str) -> str | None:
+    return f"{key[:3]}…{key[-4:]}" if len(key) >= 8 else ("configured" if key else None)
+
+
+@router.get("/ai", response_model=AISettingsResponse)
+async def get_ai_settings():
+    settings = get_config().ai
+    return AISettingsResponse(
+        provider=settings.provider,
+        model=settings.model,
+        base_url=settings.base_url,
+        api_key_configured=bool(settings.api_key),
+        api_key_hint=_ai_key_hint(settings.api_key),
+        locked=is_settings_locked_ntp(),
+    )
+
+
+@router.put("/ai")
+async def update_ai_settings(request: AISettingsUpdateRequest):
+    _reject_if_locked(loosening=True)
+    provider = request.provider.strip().lower()
+    if provider not in {"openrouter", "google", "local"}:
+        raise HTTPException(status_code=400, detail="Unsupported AI provider")
+    if not request.model.strip():
+        raise HTTPException(status_code=400, detail="Model is required")
+    if provider == "local" and not request.base_url.strip():
+        raise HTTPException(status_code=400, detail="Local URL is required")
+
+    config = get_config()
+    config.ai.provider = provider
+    config.ai.model = request.model.strip()
+    config.ai.base_url = request.base_url.strip()
+    if request.api_key is not None and request.api_key.strip():
+        config.ai.api_key = request.api_key.strip()
+    save_config(config)
+    reload_config()
+    return {"success": True}
 
 
 def _reject_if_locked(loosening: bool) -> None:
