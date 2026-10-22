@@ -1,0 +1,49 @@
+name: Firefox Unsigned XPI
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and release unsigned Firefox XPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Firefox extension
+        run: |
+          set -euo pipefail
+          rm -rf build/firefox-extension dist
+          mkdir -p build/firefox-extension dist
+          cp -a extension/. build/firefox-extension/
+          mv build/firefox-extension/manifest.firefox.json \
+             build/firefox-extension/manifest.json
+          rm -rf build/firefox-extension/native-host
+
+      - name: Package unsigned XPI
+        run: |
+          set -euo pipefail
+          (
+            cd build/firefox-extension
+            zip -qr "../../dist/hyprblocker-firefox-unsigned-${GITHUB_SHA}.xpi" .
+          )
+
+      - name: Create unsigned release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: firefox-unsigned-${{ github.sha }}
+          name: Firefox unsigned XPI (${{ github.sha }})
+          body: |
+            Unsigned Firefox extension package built from commit `${{ github.sha }}`.
+
+            Install it in Firefox with `about:debugging#/runtime/this-firefox`.
+            Zen Browser users can enable unsigned extension installation in its
+            `about:config` settings.
+          prerelease: true
+          make_latest: false
+          files: dist/hyprblocker-firefox-unsigned-${{ github.sha }}.xpi
+

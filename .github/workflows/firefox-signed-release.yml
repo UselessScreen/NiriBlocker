@@ -1,0 +1,69 @@
+name: Firefox Signed XPI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Sign and release Firefox XPI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify workflow runner
+        if: github.actor != github.repository_owner
+        run: |
+          echo "::error::Unauthorized: Only the repository owner can trigger the signed release workflow."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install web-ext
+        run: npm install --global web-ext
+
+      - name: Prepare Firefox extension
+        run: |
+          set -euo pipefail
+          rm -rf build/firefox-extension dist
+          mkdir -p build/firefox-extension dist
+          cp -a extension/. build/firefox-extension/
+          mv build/firefox-extension/manifest.firefox.json \
+             build/firefox-extension/manifest.json
+          rm -rf build/firefox-extension/native-host
+
+      - name: Sign Firefox extension with Mozilla
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$AMO_JWT_ISSUER"
+          test -n "$AMO_JWT_SECRET"
+          web-ext sign \
+            --source-dir build/firefox-extension \
+            --artifacts-dir dist \
+            --channel unlisted \
+            --api-key "$AMO_JWT_ISSUER" \
+            --api-secret "$AMO_JWT_SECRET"
+          signed_xpi="$(find dist -maxdepth 1 -type f -name '*.xpi' -print -quit)"
+          test -n "$signed_xpi"
+          mv "$signed_xpi" "dist/hyprblocker-firefox-signed-${{ github.sha }}.xpi"
+
+      - name: Create signed release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: firefox-signed-${{ github.run_number }}-${{ github.sha }}
+          name: Firefox signed XPI (${{ github.run_number }})
+          body: |
+            Signed Firefox extension package built from commit `${{ github.sha }}`.
+
+            This package was signed by Mozilla Add-ons as an unlisted extension.
+          prerelease: false
+          make_latest: false
+          files: dist/hyprblocker-firefox-signed-${{ github.sha }}.xpi
