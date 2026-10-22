@@ -16,6 +16,7 @@ let blocksData = [];  // Array of {id, name, blocked[], allowed[]}
 let safeSearchEnabled = false;  // Safe search enforcement setting
 let heartbeatIntervalId = null;
 let rulesRefreshIntervalId = null;
+const actionApi = chrome.action || chrome.browserAction;
 
 // Deduplication to prevent multiple redirects for same navigation
 const BLOCK_CACHE_DURATION = 2000; // 2 seconds
@@ -239,17 +240,17 @@ async function sendHeartbeat() {
         if (response.ok) {
             console.log('Heartbeat sent successfully');
             // Update badge to show connected
-            chrome.action.setBadgeText({ text: '' });
-            chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+            actionApi.setBadgeText({ text: '' });
+            actionApi.setBadgeBackgroundColor({ color: '#4CAF50' });
         } else {
             console.error('Heartbeat failed:', response.status);
-            chrome.action.setBadgeText({ text: '!' });
-            chrome.action.setBadgeBackgroundColor({ color: '#F44336' });
+            actionApi.setBadgeText({ text: '!' });
+            actionApi.setBadgeBackgroundColor({ color: '#F44336' });
         }
     } catch (error) {
         console.error('Failed to send heartbeat:', error);
-        chrome.action.setBadgeText({ text: '!' });
-        chrome.action.setBadgeBackgroundColor({ color: '#F44336' });
+        actionApi.setBadgeText({ text: '!' });
+        actionApi.setBadgeBackgroundColor({ color: '#F44336' });
     }
 }
 

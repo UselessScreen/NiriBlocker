@@ -127,6 +127,26 @@ journalctl --user -u hyprblocker -f
 2. "Load unpacked" → select `~/.local/share/hyprblocker/extension/`
 3. In the extension's details, enable **"Allow in incognito"** (required — enforcement checks for it)
 
+**Firefox:**
+
+1. Go to `about:debugging#/runtime/this-firefox`
+2. Click **"Load Temporary Add-on"** and select `~/.local/share/hyprblocker/firefox-extension/manifest.json`
+3. In the extension's details, enable **"Run in Private Windows"** (required — enforcement checks for it)
+
+Firefox only permits unsigned extensions as temporary add-ons. The install script
+provides a Firefox-compatible MV2 background manifest and native-messaging
+registration, but it does not produce an AMO-signed XPI. For a persistent
+installation, package the `firefox-extension/` directory as an XPI and submit it
+to Mozilla Add-ons for signing; keep the declared ID
+`hyprblocker@hyprblocker.local` unchanged so native messaging continues to work.
+
+GitHub Actions publishes an unsigned XPI automatically for every commit to
+`main`. A signed XPI can be published manually from **Actions → Firefox Signed
+XPI → Run workflow**. That workflow requires repository secrets named
+`AMO_JWT_ISSUER` and `AMO_JWT_SECRET`, created from a Mozilla Add-ons API
+credential. Signing uses the `unlisted` channel, so it does not consume a
+public listing workflow, but Mozilla's signing rate limits still apply.
+
 ### 5. Launch the desktop app
 
 ```bash

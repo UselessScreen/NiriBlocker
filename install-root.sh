@@ -118,6 +118,11 @@ install -d -o root -g root -m 0755 "$OPT_DIR/native-host"
 install -o root -g root -m 0755 "$REPO_DIR/extension/native-host/host.py" "$OPT_DIR/native-host/host.py"
 # extension/ itself arrived via rsync and was made world-readable above.
 [[ -f "$OPT_DIR/extension/manifest.json" ]] || die "$OPT_DIR/extension/manifest.json missing after rsync"
+# Keep a Firefox-compatible manifest beside the Chromium MV3 extension. Firefox
+# does not support the MV3 service-worker background used by manifest.json.
+rm -rf "$OPT_DIR/firefox-extension"
+cp -a "$OPT_DIR/extension" "$OPT_DIR/firefox-extension"
+mv "$OPT_DIR/firefox-extension/manifest.firefox.json" "$OPT_DIR/firefox-extension/manifest.json"
 
 # --- rendered assets (single source of truth: daemon.system_assets) ---------
 

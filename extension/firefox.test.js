@@ -8,8 +8,11 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
-const manifest = JSON.parse(
+const chromeManifest = JSON.parse(
     readFileSync(new URL('./manifest.json', import.meta.url), 'utf8'),
+);
+const manifest = JSON.parse(
+    readFileSync(new URL('./manifest.firefox.json', import.meta.url), 'utf8'),
 );
 const nativeManifest = JSON.parse(
     readFileSync(
@@ -26,6 +29,8 @@ describe('Firefox extension compatibility', () => {
             'hyprblocker@hyprblocker.local',
         );
         expect(manifest.permissions).toContain('nativeMessaging');
+        expect(manifest.background.scripts).toEqual(['background.js']);
+        expect(manifest.browser_action).toBeDefined();
     });
 
     test('registers native messaging for the same Firefox extension ID', () => {
@@ -38,6 +43,7 @@ describe('Firefox extension compatibility', () => {
 
     test('installer writes the Firefox native-messaging manifest', () => {
         expect(installer).toContain('FIREFOX_NATIVE_DIR="$HOME/.mozilla/native-messaging-hosts"');
+        expect(installer).toContain('firefox-extension');
         expect(installer).toContain('allowed_extensions');
         expect(installer).toContain('hyprblocker@hyprblocker.local');
     });
@@ -45,5 +51,7 @@ describe('Firefox extension compatibility', () => {
     test('background service worker recognizes Firefox', () => {
         expect(background).toContain("userAgent.includes('firefox')");
         expect(background).toContain("return 'firefox'");
+        expect(background).toContain('chrome.action || chrome.browserAction');
+        expect(chromeManifest.manifest_version).toBe(3);
     });
 });
