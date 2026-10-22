@@ -504,6 +504,35 @@ class API:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
+    def get_ai_settings(self) -> dict:
+        result = self.client.get_ai_settings()
+        if result:
+            return {
+                'provider': result.get('provider', 'openrouter'),
+                'model': result.get('model', ''),
+                'baseUrl': result.get('base_url', ''),
+                'apiKeyConfigured': result.get('api_key_configured', False),
+                'apiKeyHint': result.get('api_key_hint'),
+                'locked': result.get('locked', False),
+            }
+        return {
+            'provider': 'openrouter',
+            'model': 'anthropic/claude-sonnet-5',
+            'baseUrl': 'https://openrouter.ai/api/v1',
+            'apiKeyConfigured': False,
+            'apiKeyHint': None,
+            'locked': False,
+        }
+
+    def set_ai_settings(self, settings: dict) -> dict:
+        try:
+            result = self.client.set_ai_settings(settings)
+            return {'success': True, **result}
+        except PermissionError as e:
+            return {'success': False, 'settingsLocked': True, 'error': str(e)}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
     def request_grant(self, url: str, reason: str, minutes: int) -> dict:
         """Request a temporary access grant for a URL.
 

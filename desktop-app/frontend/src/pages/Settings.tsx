@@ -12,6 +12,7 @@ import type {
   WatchdogStatus,
   SettingsLockStatus,
   JudgePolicyStatus,
+  AISettings,
 } from "../types";
 
 type DurationUnit = 'minute' | 'hour' | 'day' | 'month';
@@ -40,6 +41,12 @@ export function Settings() {
   // null = untouched (mirror the loaded policy); a string = user has edits.
   const [policyDraft, setPolicyDraft] = useState<string | null>(null);
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [aiSettings, setAISettings] = useState<AISettings | null>(null);
+  const [aiProvider, setAIProvider] = useState("openrouter");
+  const [aiModel, setAIModel] = useState("");
+  const [aiBaseUrl, setAIBaseUrl] = useState("");
+  const [aiApiKey, setAIApiKey] = useState("");
+  const [savingAI, setSavingAI] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [lockDurationValue, setLockDurationValue] = useState(1);
   const [lockDurationUnit, setLockDurationUnit] = useState<DurationUnit>('hour');
@@ -196,6 +203,18 @@ export function Settings() {
     }
   }, []);
 
+  const loadAISettings = useCallback(async () => {
+    try {
+      const settings = await api.getAISettings();
+      setAISettings(settings);
+      setAIProvider(settings.provider);
+      setAIModel(settings.model);
+      setAIBaseUrl(settings.baseUrl);
+    } catch (error) {
+      console.error("Failed to load AI settings:", error);
+    }
+  }, []);
+
   // Load all settings on mount
   useEffect(() => {
     loadBrowserEnforcementStatus();
@@ -204,6 +223,7 @@ export function Settings() {
     loadWatchdogStatus();
     loadSettingsLock();
     loadJudgePolicy();
+    loadAISettings();
   }, [
     loadBrowserEnforcementStatus,
     loadSafeSearchStatus,
@@ -211,7 +231,46 @@ export function Settings() {
     loadWatchdogStatus,
     loadSettingsLock,
     loadJudgePolicy,
+    loadAISettings,
   ]);
+
+  const handleSaveAI = async () => {
+    setSavingAI(true);
+    try {
+      const result = await api.setAISettings({
+        provider: aiProvider,
+        model: aiModel,
+        base_url: aiBaseUrl,
+        ...(aiApiKey ? { api_key: aiApiKey } : {}),
+      });
+      if (result.success) {
+        setAIApiKey("");
+        showToast("AI settings saved", "success");
+        await loadAISettings();
+      } else {
+        showToast(result.error || "Failed to update AI settings", "error");
+      }
+    } catch (error) {
+      console.error("Failed to update AI settings:", error);
+      showToast("Failed to update AI settings", "error");
+    } finally {
+      setSavingAI(false);
+    }
+  };
+
+  const handleAIProviderChange = (provider: string) => {
+    setAIProvider(provider);
+    if (provider === "google" && (!aiModel || aiModel === "anthropic/claude-sonnet-5")) {
+      setAIModel("gemini-2.5-flash");
+    } else if (provider === "local" && (!aiModel || aiModel === "anthropic/claude-sonnet-5")) {
+      setAIModel("llama3.2");
+    }
+    if (provider === "local" && (!aiBaseUrl || aiBaseUrl === "https://openrouter.ai/api/v1")) {
+      setAIBaseUrl("http://127.0.0.1:11434/v1");
+    } else if (provider !== "local" && aiBaseUrl === "http://127.0.0.1:11434/v1") {
+      setAIBaseUrl("https://openrouter.ai/api/v1");
+    }
+  };
 
   const handleSaveJudgePolicy = async () => {
     const text = policyDraft ?? judgePolicy?.text ?? "";
@@ -398,6 +457,29 @@ export function Settings() {
           <div className="flex justify-between py-3">
             <span className="text-text-secondary">Port:</span>
             <span className="font-medium text-text">8765</span>
+          </div>
+        </Card>
+
+        <Card title="Grant Judge AI">
+          <div className="py-3 space-y-3">
+            <label className="block text-sm text-text-secondary">Provider</label>
+            <Select value={aiProvider} onChange={(e) => handleAIProviderChange(e.target.value)} disabled={savingAI || aiSettings?.locked}>
+              <option value="openrouter">OpenRouter</option>
+              <option value="google">Google Gemini</option>
+              <option value="local">Local (OpenAI-compatible)</option>
+            </Select>
+            <label className="block text-sm text-text-secondary">Model</label>
+            <Input value={aiModel} onChange={(e) => setAIModel(e.target.value)} disabled={savingAI || aiSettings?.locked} />
+            <label className="block text-sm text-text-secondary">Local URL / API base URL</label>
+            <Input value={aiBaseUrl} onChange={(e) => setAIBaseUrl(e.target.value)} disabled={savingAI || aiSettings?.locked} />
+            <label className="block text-sm text-text-secondary">API key</label>
+            <Input type="password" value={aiApiKey} onChange={(e) => setAIApiKey(e.target.value)} placeholder={aiSettings?.apiKeyHint ? `Saved (${aiSettings.apiKeyHint})` : "Optional for local"} disabled={savingAI || aiSettings?.locked} />
+            <Button onClick={handleSaveAI} disabled={savingAI || !!aiSettings?.locked}>
+              {savingAI ? "Saving..." : "Save AI settings"}
+            </Button>
+            <p className="text-xs text-text-secondary">
+              Google uses its Gemini API. Local uses an OpenAI-compatible chat endpoint such as Ollama.
+            </p>
           </div>
         </Card>
 

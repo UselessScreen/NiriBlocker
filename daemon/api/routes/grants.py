@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter
 
-from daemon.grants import audit, judge, openrouter, policy, ratelimit, store
+from daemon.grants import ai, audit, judge, openrouter, policy, ratelimit, store
 from daemon.grants import breakglass as breakglass_mod
 from daemon.grants.models import MAX_GRANT_MINUTES, GrantRequest, GrantTier, Verdict
 from daemon.grants.tier1 import normalize_url_pattern
@@ -63,12 +63,12 @@ def _enforced_target(request_url: str, verdict_scope: str) -> str:
 def _judge_client():
     """Build the tier-1 (user-daemon) judge client, or None if unconfigured.
 
-    Overridable in tests. Returns None when no OpenRouter key is available, which
+    Overridable in tests. Returns None when the configured provider is unavailable, which
     the caller turns into a fail-closed deny (never an exception to the user).
     """
     try:
-        return openrouter.OpenRouterClient(openrouter.load_user_tier_config())
-    except openrouter.OpenRouterError as e:
+        return ai.create_client(ai.load_user_tier_config())
+    except (ai.AIProviderError, openrouter.OpenRouterError) as e:
         logger.warning("Tier-1 judge unavailable: %s", e)
         return None
 

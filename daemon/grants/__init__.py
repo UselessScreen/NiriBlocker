@@ -7,8 +7,8 @@ this package deliberately does not touch:
    - ``POST /api/grants/request`` — body {url|argv, reason, minutes, tier}:
      build ``GrantRequest.new(...)``; ``audit.record_request(req)``; run
      ``judge.evaluate(req, policy_text=policy.load_policy_text(),
-     audit_entries=audit.read_entries(), client=OpenRouterClient(
-     openrouter.load_user_tier_config()))`` (tier 1 ONLY — see R2 note below);
+     audit_entries=audit.read_entries(), client=ai.create_client(
+     ai.load_user_tier_config()))`` (tier 1 ONLY — see R2 note below);
      ``audit.record_decision(...)`` with the returned stage+transcript; on
      allow for tier 1, apply ``tier1.plan_allowlist_grant(url,
      active_blocks, verdict.minutes, now)`` through the block CRUD session and
@@ -35,7 +35,7 @@ this package deliberately does not touch:
 SECURITY INVARIANTS THE WIRING MUST PRESERVE:
 - Denylist and ratelimit run BEFORE the judge (``judge.evaluate`` enforces
   this ordering — use it, don't call ``judge_request`` directly from routes).
-- R2: ``openrouter.load_user_tier_config`` (env/.env) is for tier 1 only.
+- R2: user-tier provider settings are for tier 1 only.
   The tier-3/root judge config comes from root-owned
   ``secure/grant_broker.json``, passed explicitly as ``OpenRouterConfig`` by
   the ENFORCER — never read in the user daemon, never from config.json.

@@ -223,6 +223,21 @@ export interface JudgePolicyUpdateResponse {
   error?: string;
 }
 
+export interface AISettings {
+  provider: 'openrouter' | 'google' | 'local';
+  model: string;
+  baseUrl: string;
+  apiKeyConfigured: boolean;
+  apiKeyHint: string | null;
+  locked: boolean;
+}
+
+export interface AISettingsUpdateResponse {
+  success: boolean;
+  settingsLocked?: boolean;
+  error?: string;
+}
+
 // Grants
 export interface GrantDecision {
   decision: 'allow' | 'deny';
@@ -298,6 +313,13 @@ declare global {
         unlock_settings(): Promise<SettingsLockResponse>;
         get_judge_policy(): Promise<JudgePolicyStatus>;
         set_judge_policy(text: string): Promise<JudgePolicyUpdateResponse>;
+        get_ai_settings(): Promise<AISettings>;
+        set_ai_settings(settings: {
+          provider: string;
+          model: string;
+          base_url: string;
+          api_key?: string;
+        }): Promise<AISettingsUpdateResponse>;
         request_grant(url: string, reason: string, minutes: number): Promise<GrantDecision>;
         list_grants(): Promise<GrantsList>;
         request_breakglass(): Promise<BreakglassStatus>;
