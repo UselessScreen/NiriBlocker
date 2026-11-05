@@ -149,3 +149,45 @@ def test_ignores_niri_windows_without_id(monkeypatch):
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
 
     assert asyncio.run(CompositorMonitor(None).get_all_windows()) == []
+
+
+def test_re_detects_compositor_when_cached_choice_fails(monkeypatch):
+    commands = []
+
+    async def fake_create_subprocess_exec(*command, **kwargs):
+        commands.append(command)
+        if command[0] == "hyprctl":
+            return _Process([], returncode=1, stderr=b"not running")
+        return _Process([{"id": 9, "app_id": "firefox", "pid": 1111}])
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    monitor = CompositorMonitor(None)
+    monitor._compositor = "hyprland"
+
+    windows = asyncio.run(monitor.get_all_windows())
+
+    assert commands == [
+        ("hyprctl", "clients", "-j"),
+        ("niri", "msg", "-j", "windows"),
+    ]
+    assert monitor._compositor == "niri"
+    assert windows[0]["class"] == "firefox"
+
+
+def test_niri_falls_back_to_window_properties_class(monkeypatch):
+    async def fake_create_subprocess_exec(*command, **kwargs):
+        return _Process([
+            {
+                "id": 42,
+                "app_id": None,
+                "pid": 1234,
+                "window_properties": {"class": "discord"},
+            }
+        ])
+
+    monkeypatch.setenv("NIRI_SOCKET", "/run/user/1000/niri.sock")
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+
+    windows = asyncio.run(CompositorMonitor(None).get_all_windows())
+
+    assert windows[0]["class"] == "discord"

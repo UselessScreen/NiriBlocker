@@ -75,11 +75,30 @@ class CompositorMonitor:
         # The environment variables make the common case a single IPC call,
         # while the fallback keeps startup robust when a service inherited a
         # minimal environment.
+        preferred: str | None = None
         if self._compositor is not None:
-            windows = await self._run_ipc(self._compositor)
-            return self._normalize_windows(windows, self._compositor)
+            try:
+                windows = await self._run_ipc(self._compositor)
+                return self._normalize_windows(windows, self._compositor)
+            except CompositorIPCError as e:
+                failed = self._compositor
+                logger.warning(
+                    "Cached compositor %s unavailable (%s); re-detecting",
+                    failed,
+                    e,
+                )
+                self._compositor = None
+                preferred = "niri" if failed == "hyprland" else "hyprland"
 
-        preferred = "niri" if os.environ.get("NIRI_SOCKET") else "hyprland"
+        if preferred is None:
+            niri_hint = bool(os.environ.get("NIRI_SOCKET"))
+            hyprland_hint = bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))
+            if niri_hint and not hyprland_hint:
+                preferred = "niri"
+            elif hyprland_hint and not niri_hint:
+                preferred = "hyprland"
+            else:
+                preferred = "hyprland"
         compositors = [preferred, "hyprland" if preferred == "niri" else "niri"]
         errors = []
         for compositor in compositors:
@@ -100,7 +119,13 @@ class CompositorMonitor:
                 continue
             item = dict(window)
             if compositor == "niri":
-                item["class"] = str(item.get("app_id") or "")
+                niri_props = item.get("window_properties")
+                fallback_class = ""
+                if isinstance(niri_props, dict):
+                    fallback_class = str(
+                        niri_props.get("class") or niri_props.get("instance") or ""
+                    )
+                item["class"] = str(item.get("app_id") or item.get("class") or fallback_class)
                 if item.get("id") is None:
                     logger.warning("Ignoring Niri window without an id: %r", item)
                     continue
