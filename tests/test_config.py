@@ -6,7 +6,6 @@ import json
 
 from daemon import config as config_module
 
-
 LEGACY_BROWSERS = [
     "firefox",
     "firefox-esr",
