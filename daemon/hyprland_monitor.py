@@ -75,26 +75,30 @@ class CompositorMonitor:
         # The environment variables make the common case a single IPC call,
         # while the fallback keeps startup robust when a service inherited a
         # minimal environment.
+        preferred: str | None = None
         if self._compositor is not None:
             try:
                 windows = await self._run_ipc(self._compositor)
                 return self._normalize_windows(windows, self._compositor)
             except CompositorIPCError as e:
+                failed = self._compositor
                 logger.warning(
                     "Cached compositor %s unavailable (%s); re-detecting",
-                    self._compositor,
+                    failed,
                     e,
                 )
                 self._compositor = None
+                preferred = "niri" if failed == "hyprland" else "hyprland"
 
-        niri_hint = bool(os.environ.get("NIRI_SOCKET"))
-        hyprland_hint = bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))
-        if niri_hint and not hyprland_hint:
-            preferred = "niri"
-        elif hyprland_hint and not niri_hint:
-            preferred = "hyprland"
-        else:
-            preferred = "hyprland"
+        if preferred is None:
+            niri_hint = bool(os.environ.get("NIRI_SOCKET"))
+            hyprland_hint = bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))
+            if niri_hint and not hyprland_hint:
+                preferred = "niri"
+            elif hyprland_hint and not niri_hint:
+                preferred = "hyprland"
+            else:
+                preferred = "hyprland"
         compositors = [preferred, "hyprland" if preferred == "niri" else "niri"]
         errors = []
         for compositor in compositors:
